@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+#Need ignore, contents merchant credentials
+config.py
+
 # C extensions
 *.so
 
