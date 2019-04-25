@@ -28,3 +28,7 @@ API_PATH = 'merchants/'
 API_FUNC = 'payments/'
 url = 'https://api.clover.com/v3/' + API_PATH + MID + '/' + API_FUNC
 
+#Database credentials
+DB = '***'
+DB_USER = '***'
+DB_PWD = '***'

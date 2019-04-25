@@ -23,26 +23,76 @@ SOFTWARE.
 ''' 
 
 import requests
-#import requests.exceptions
-import json
-import config
+import config as cfg
+import pymysql, os, json
+
+# do validation and checks before insert
+def val_str(val):
+   if val != None:
+        if type(val) is int:
+            return str(val).encode('utf-8')
+        else:
+            return val
 
 headers={   
             'Content-Type':'application/json',
-            'authorization':'Bearer '+ config.API_TOKEN
+            'authorization':'Bearer '+ cfg.API_TOKEN
 }
 
-data = { "expend":"", "access_token" : config.API_TOKEN  }
+data = { "expend":"", "access_token" : cfg.API_TOKEN  }
 
 try:
-    myResponse = requests.get( config.url, data=data, headers= headers )
+    myResponse = requests.get( cfg.url, data=data, headers= headers )
     
     myResponse.raise_for_status()
     # Loading the response data into a dict variable
     # json.loads takes in only binary or string variables so using content to fetch binary content
     # Loads (Load String) takes a Json file and converts into python data structure (dict or list, depending on JSON)
-    parsed = json.loads(myResponse.text)
-    print(json.dumps(parsed, indent=4, sort_keys=True))
+
+    json_obj  = json.loads( myResponse.text )
+
+# connect to MySQL
+    connection = pymysql.connect( host=cfg.DB_HOST, user=cfg.DB_USER, passwd=cfg.DB_PWD, db=cfg.DB )
+    cursor = connection.cursor()
+    
+    
+# parse json data to SQL insert
+    sql_data = []
+
+    for i, item in enumerate(json_obj["elements"]):
+        val_fmt = []
+        col_fmt = []
+        v = []
+        for j,field in enumerate(cfg.TRX_COL):
+            if( cfg.TRX_COL[field]):
+            #is array
+                for k,sf in enumerate(cfg.TRX_COL[field]):
+                    val_fmt.append('%s')
+                    col_fmt.append('`'+ str(field) + '_' + str(sf) + '`')
+                    v.append(item[field][sf])
+
+            else:    
+                val_fmt.append('%s')
+                col_fmt.append('`'+field+'`')
+                try:
+                    v.append(item[field])
+                except:
+                    v.append(0)
+
+        sql_data.append (v)
+        
+        cols = ','.join(col_fmt)
+        vals = ','.join(val_fmt)
+
+        
+    try:
+        sql_exec = 'INSERT INTO ' + str(cfg.TRX_TABLE) + ' (' + cols + ') VALUES (' + vals + ') '
+        cursor.executemany( sql_exec , sql_data  )
+        connection.commit()
+        print("insert successfully")
+    
+    except pymysql.Error as e:
+        print("mySQL Error %d: %s" % (e.args[0], e.args[1]))
 
 except requests.exceptions.HTTPError as errh:
     print ("Http Error:",errh)
@@ -52,5 +102,8 @@ except requests.exceptions.Timeout as errt:
     print ("Timeout Error:",errt)
 except requests.exceptions.RequestException as err:
     print ("OOps: Something Else",err)
+finally:
+    connection.close()
+    print("the end.")
     
 
