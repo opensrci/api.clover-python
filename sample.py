@@ -25,7 +25,7 @@ SOFTWARE.
 import function as fun
 import config as conf
 
-#fun.retrieve (conf.reqHeader["employees"])
+fun.retrieve (conf.reqHeader["employees"])
 
 fun.retrieve (conf.reqHeader["payments"])
 

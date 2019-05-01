@@ -29,14 +29,6 @@ from datetime import datetime
 #debug
 import sys
 
-# do validation and checks before insert
-def val_str(val):
-   if val != None:
-        if type(val) is int:
-            return str(val).encode('utf-8')
-        else:
-            return val
-
 def retrieve( reqHeader  ):
     headers={   
                 'Content-Type':'application/json',
@@ -47,19 +39,8 @@ def retrieve( reqHeader  ):
     
     try:
         myResponse = requests.get( reqHeader["url"], data=data, headers= headers )
-        
-        myResponse.raise_for_status()
-        # Loading the response data into a dict variable
-        # json.loads takes in only binary or string variables so using content to fetch binary content
-        # Loads (Load String) takes a Json file and converts into python data structure (dict or list, depending on JSON)
-    
         json_obj  = json.loads( myResponse.text )
     
-        # connect to MySQL
-        connection = pymysql.connect( host=reqHeader["db_host"], user=reqHeader["db_user"], passwd=reqHeader["db_pwd"], db=reqHeader["db"] )
-        cursor = connection.cursor()
-        
-        
         # parse json data to SQL insert
         sql_data = []
     
@@ -75,19 +56,29 @@ def retrieve( reqHeader  ):
                     #is array
                         sub_col = reqHeader["db_cols"].get(field)
                         for k,sf in enumerate(sub_col):
-                            col_type = reqHeader["db_col_type"][field].get(sf)
-                            val_fmt.append('%s')
-                            col_fmt.append('`'+ str(field) + '_' + str(sf) + '`')
                             try:
                                 f = item[field][sf]
                             except:
                                 f = ""
- 
-                            if ( 'DATETIME' in col_type ):
-                                f = datetime.utcfromtimestamp(f/1000).strftime('%Y-%m-%d %H:%M:%S')
+                                
+                            if ( f != '') or (f is not None ):
+                                col_type = reqHeader["db_col_type"][field].get(sf)
+                                val_fmt.append('%s')
+                                col_fmt.append('`'+ str(field) + '_' + str(sf) + '`')
+                                if ( 'DATETIME' in col_type ):
+                                    if  f is not None and f != "":
+                                        f = datetime.utcfromtimestamp(f/1000).strftime('%Y-%m-%d %H:%M:%S')
+                                    else:
+                                        if f is None:
+                                            f = 0
+                                        else: 
+                                            f =''
+                                else:
+                                    if f is None:
+                                        f = ''
+                                
+                                v.append(f)                            
 
-                            v.append(f)                            
-                           
                     else: 
                         val_fmt.append('%s')
                         col_fmt.append('`'+ str(field)+'`')
@@ -97,19 +88,31 @@ def retrieve( reqHeader  ):
                             f = ""
 
                         if ( 'DATETIME' in col_type ):
-                            f = datetime.utcfromtimestamp(f/1000).strftime('%Y-%m-%d %H:%M:%S')
+                            if  f is not None and f != "":
+                                f = datetime.utcfromtimestamp(f/1000).strftime('%Y-%m-%d %H:%M:%S')
+                            else:
+                                if f is None:
+                                    f = 0
+                                else: 
+                                    f =''
+                        else:
+                            if f is None:
+                                f = ''
+    
                         v.append(f)                            
-                    
+
                 except:
                     pass
 
-            sql_data.append (v)
             
             cols = ','.join(col_fmt)
             vals = ','.join(val_fmt)
-    
-            
+            sql_data.append (v)
+
         try:
+            # connect to MySQL
+            connection = pymysql.connect( host=reqHeader["db_host"], user=reqHeader["db_user"], passwd=reqHeader["db_pwd"], db=reqHeader["db"] )
+            cursor = connection.cursor()
             sql_exec = 'INSERT INTO ' + str( reqHeader["db_table"] ) + ' (' + cols + ') VALUES (' + vals + ') '
             cursor.executemany( sql_exec , sql_data  )
             connection.commit()
@@ -121,7 +124,8 @@ def retrieve( reqHeader  ):
     except  :
         print("Error:" , sys.exc_info()[0])
     else:
+        print("Successful")
+    finally:
         connection.close()
-        return("Successful")
-    
+        
 
