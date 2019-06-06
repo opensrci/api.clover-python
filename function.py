@@ -22,6 +22,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ''' 
 
+#Local constants
+MAX_RETRIEVE_REC=1000
+
 import requests
 import pymysql, os, json
 import time
@@ -50,7 +53,7 @@ def retrieve( reqHeader, reqFilters ):
     
     for i,item in enumerate(reqFilters):
         addkey(filters, 'filter', item)
-        
+    addkey(filters,'limit', MAX_RETRIEVE_REC)    
         
     try:
         myResponse = requests.get( reqHeader["url"], params= filters, headers = headers )
