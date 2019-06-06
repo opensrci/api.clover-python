@@ -24,22 +24,37 @@ SOFTWARE.
 
 import requests
 import pymysql, os, json
+import time
 from datetime import datetime
 
 #debug
 import sys
 
-def retrieve( reqHeader  ):
+def addkey(dictionary, key, value):
+    if key not in dictionary:
+        dictionary[key] = []
+    dictionary[key].append(value)
+
+def totime( str ):
+    utc_time = datetime.strptime(str, "%Y-%m-%d %H:%M:%S")
+    return int((utc_time - datetime(1970, 1, 1)).total_seconds())  
+
+
+def retrieve( reqHeader, reqFilters ):
     headers={   
                 'Content-Type':'application/json',
                 'authorization':'Bearer '+ reqHeader["api_token"]
     }
+
+    filters = {}
     
-    data = { "expend":"", "access_token" : reqHeader["api_token"] }
-    
+    for i,item in enumerate(reqFilters):
+        addkey(filters, 'filter', item)
+        
+        
     try:
-        myResponse = requests.get( reqHeader["url"], data=data, headers= headers )
-        json_obj  = json.loads( myResponse.text )
+        myResponse = requests.get( reqHeader["url"], params= filters, headers = headers )
+        json_obj  =myResponse.json();
     
         # parse json data to SQL insert
         sql_data = []
@@ -75,7 +90,10 @@ def retrieve( reqHeader  ):
                                             f =''
                                 else:
                                     if f is None:
-                                        f = ''
+                                        if ( 'LONG' in col_type ):
+                                            f = 0
+                                        else:
+                                            f = ''
                                 
                                 v.append(f)                            
 
@@ -97,8 +115,11 @@ def retrieve( reqHeader  ):
                                     f =''
                         else:
                             if f is None:
-                                f = ''
-    
+                                if ( 'LONG' in col_type ):
+                                    f = 0
+                                else:
+                                    f = ''
+
                         v.append(f)                            
 
                 except:

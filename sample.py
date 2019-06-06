@@ -25,8 +25,17 @@ SOFTWARE.
 import function as fun
 import config as conf
 
-fun.retrieve (conf.reqHeader["employees"])
+#fun.retrieve (conf.reqHeader["employees"], "limit", "=300" )
 
-fun.retrieve (conf.reqHeader["payments"])
+
+ft = str(fun.totime('2019-06-01 00:00:00')) +'000'
+tt = str(fun.totime('2019-06-03 00:00:00')) +'000'
+
+filters = {
+    "modifiedTime>=" + ft,
+    "modifiedTime<=" + tt,
+}
+
+fun.retrieve (conf.reqHeader["payments"],filters )
 
 
